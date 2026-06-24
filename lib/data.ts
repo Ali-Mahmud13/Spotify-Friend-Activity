@@ -25,7 +25,11 @@ const UNKNOWN_PROFILE_CREATED_AT = "1970-01-01T00:00:00.000Z";
 const RECENT_TRACK_FETCH_LIMIT = 100;
 const REPEAT_STATS_FETCH_LIMIT = 100;
 
-type SupabaseClient = NonNullable<ReturnType<typeof createSupabaseClient>>;
+// Supabase's client generics vary between direct and inferred call sites in v2,
+// but these helpers only need the standard query builder methods.
+type SupabaseClient = NonNullable<ReturnType<typeof createSupabaseClient>> & {
+  from: NonNullable<ReturnType<typeof createSupabaseClient>>["from"];
+};
 type CurrentTrackWithProfile = CurrentTrack & {
   profile?: Profile | null;
   profiles?: Profile | Profile[] | null;
@@ -106,7 +110,7 @@ async function getProfilesByUserIds(
   const { data, error } = await supabase
     .from("profiles")
     .select(PROFILE_COLUMNS)
-    .in("id", uniqueUserIds)
+    .filter("id", "in", `(${uniqueUserIds.join(",")})`)
     .order("display_name", { ascending: true });
 
   if (error) {
